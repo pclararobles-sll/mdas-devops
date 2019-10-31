@@ -9,7 +9,8 @@ deps(){
 
 # cleanup
 cleanup(){
-    pkill votingapp || ps aux | grep votingapp | awk {'print $1'} | head -1 | xargs kill -9
+    # pkill votingapp || ps aux | grep votingapp | awk {'print $1'} | head -1 | xargs kill -9
+    sudo docker rm -f myvotingapp
     rm -rf build
 }
 
@@ -19,9 +20,12 @@ build(){
     go build -o ./build ./src/votingapp 
     cp -r ./src/votingapp/ui ./build
 
-    pushd build
-    ./votingapp &
-    popd
+    # pushd build
+    # ./votingapp
+    sudo docker build -f src/votingapp/Dockerfile -t pclararobles/votingapp .
+    # sudo docker run --name myvotingapp -v $(pwd)/build:/app -w /app -p 8080:80 -d ubuntu ./votingapp
+    sudo docker run --name myvotingapp -p 8080:80 -d pclararobles/votingapp
+    # popd
 }
 
 retry(){
@@ -42,7 +46,7 @@ retry(){
 
 # test
 test() {
-    votingurl='http://localhost/vote'
+    votingurl='http://localhost:8080/vote'
     curl --url  $votingurl \
         --request POST \
         --data '{"topics":["dev", "ops"]}' \
@@ -72,5 +76,8 @@ test() {
 
 deps
 cleanup || true
-build
+GOOS=linux build
 retry test
+
+# delivery
+docker push pclararobles/votingapp
